@@ -1,0 +1,507 @@
+/* Torrent Player - Modern Dark Theme */
+
+.torrent-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.torrent-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  cursor: pointer;
+}
+
+/* Buffering Overlay */
+.buffering-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  z-index: 20;
+  gap: 20px;
+}
+
+.buffering-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+}
+
+.spinner-ring:nth-child(2) {
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+  border-top-color: #fff;
+  animation-duration: 1s;
+  animation-direction: reverse;
+}
+
+.spinner-ring:nth-child(3) {
+  width: 60%;
+  height: 60%;
+  top: 20%;
+  left: 20%;
+  border-top-color: rgba(255, 255, 255, 0.5);
+  animation-duration: 0.8s;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg) translateZ(0); }
+}
+
+/* Play Overlay */
+.play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.play-button-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-size: 32px;
+  box-shadow: 0 10px 40px rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.play-button-large:hover {
+  transform: scale(1.1);
+  background: #fff;
+}
+
+/* Controls Container */
+.player-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8) 0%,
+    transparent 20%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  z-index: 30;
+  padding: 20px;
+}
+
+/* Top Bar */
+.controls-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.video-title-bar {
+  flex: 1;
+}
+
+.video-title-bar h3 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.torrent-stats {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.peers-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #46d369;
+}
+
+.download-speed {
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Center Controls */
+.controls-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.skip-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 10px;
+  transition: transform 0.2s;
+}
+
+.skip-btn:hover {
+  transform: scale(1.2);
+}
+
+.skip-label {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.play-pause-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.play-pause-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Bottom Bar */
+.controls-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Progress Bar */
+.progress-container {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.progress-container:hover {
+  height: 8px;
+}
+
+.progress-container:hover .progress-handle {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.progress-buffered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  transition: width 0.1s;
+}
+
+.progress-download {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #46d369, #2db846);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.progress-played {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #fff;
+  border-radius: 3px;
+}
+
+.progress-handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translateX(-50%) translateY(-50%) scale(0);
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Controls Row */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.time-display {
+  font-size: 14px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.time-separator {
+  margin: 0 4px;
+  opacity: 0.6;
+}
+
+.controls-buttons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.control-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Volume Control */
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-slider {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Settings Menu */
+.settings-control {
+  position: relative;
+}
+
+.settings-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 10px;
+  background: rgba(20, 20, 20, 0.95);
+  border-radius: 8px;
+  padding: 15px;
+  min-width: 200px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.settings-section h4 {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 12px 0;
+}
+
+.speed-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.speed-option {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.speed-option:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.speed-option.active {
+  background: #fff;
+  color: #000;
+}
+
+/* Error State */
+.torrent-player-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.error-content {
+  text-align: center;
+  padding: 40px;
+}
+
+.error-content svg {
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 20px;
+}
+
+.error-content h3 {
+  margin: 0 0 10px 0;
+}
+
+.error-content p {
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 20px 0;
+}
+
+.error-content button {
+  padding: 12px 30px;
+  background: #fff;
+  border: none;
+  border-radius: 4px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.error-content button:hover {
+  background: #ccc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .player-controls {
+    padding: 15px;
+  }
+  
+  .controls-top {
+    flex-wrap: wrap;
+  }
+  
+  .video-title-bar h3 {
+    font-size: 14px;
+  }
+  
+  .torrent-stats {
+    display: none;
+  }
+  
+  .volume-slider {
+    display: none;
+  }
+  
+  .play-pause-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .skip-btn {
+    font-size: 20px;
+  }
+}

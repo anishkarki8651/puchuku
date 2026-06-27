@@ -1,0 +1,1234 @@
+/* ─── CustomPlayer — Ultra Premium Cinematic ───────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --cp-bg: #000000;
+  --cp-accent: #ffffff;
+  --cp-accent-hover: #f0f0f0;
+  --cp-white: #ffffff;
+  --cp-white-90: rgba(255, 255, 255, 0.9);
+  --cp-white-70: rgba(255, 255, 255, 0.7);
+  --cp-white-50: rgba(255, 255, 255, 0.5);
+  --cp-white-30: rgba(255, 255, 255, 0.3);
+  --cp-white-15: rgba(255, 255, 255, 0.15);
+  --cp-white-08: rgba(255, 255, 255, 0.08);
+  --cp-white-04: rgba(255, 255, 255, 0.04);
+  --cp-panel-bg: rgba(12, 12, 12, 0.92);
+  --cp-gradient-top: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 40%, transparent 100%);
+  --cp-gradient-bot: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+  --cp-gradient-center: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  --cp-radius: 6px;
+  --cp-font: 'Outfit', sans-serif;
+  --cp-ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --cp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --cp-transition: 0.35s var(--cp-ease);
+  --cp-transition-fast: 0.2s var(--cp-ease-out);
+}
+
+/* ── Root ── */
+.cp {
+  position: relative;
+  width: 100%;
+  /* Enforce 16:9 in embedded contexts; landscape/fullscreen overrides below */
+  aspect-ratio: 16 / 9;
+  height: auto;
+  background: var(--cp-bg);
+  overflow: hidden;
+  font-family: var(--cp-font);
+  user-select: none;
+  -webkit-user-select: none;
+  transform: translateZ(0);
+}
+
+/* When the player-container is fixed full-viewport (landscape / desktop),
+   the .cp should fill that container fully — no aspect-ratio constraint */
+.player-container:not([style]) .cp,
+.watch-page--landscape .cp {
+  aspect-ratio: unset;
+  height: 100%;
+}
+
+/* Desktop: player-container is always fixed full-screen */
+@media (min-width: 901px) {
+  .cp {
+    aspect-ratio: unset;
+    height: 100%;
+  }
+}
+
+/* Landscape mobile: fill the fixed full-screen container */
+@media (max-width: 900px) and (orientation: landscape) {
+  .cp {
+    aspect-ratio: unset;
+    height: 100dvh;
+  }
+}
+
+.cp--hide-cursor {
+  cursor: none;
+}
+
+/* Fullscreen: take over the whole viewport */
+.cp--fs {
+  aspect-ratio: unset;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+/* Center gradient overlay */
+.cp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--cp-gradient-center);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--cp-ease);
+  z-index: 1;
+}
+
+.cp--paused::before {
+  opacity: 1;
+}
+
+/* ── Video ── */
+.cp__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* ── SUBTITLES ── */
+video::cue {
+  background: rgba(0, 0, 0, 0.7) !important;
+  color: #fff !important;
+  font-family: var(--cp-font), sans-serif !important;
+  font-size: 1.1em;
+  line-height: 1.4;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Chrome/Edge hack to lift the native subtitle container above our controls only when visible */
+.cp:not(.cp--hide-cursor) video::-webkit-media-text-track-container {
+  transform: translateY(-80px) !important;
+  transition: transform 0.4s var(--cp-ease);
+}
+
+/* On mobile/smaller screens, reduce the offset */
+@media (max-width: 900px) {
+  .cp:not(.cp--hide-cursor) video::-webkit-media-text-track-container {
+    transform: translateY(-60px) !important;
+  }
+}
+
+/* Video always fills the 16:9 container; contain keeps correct framing */
+:fullscreen .cp__video,
+:-webkit-full-screen .cp__video {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+}
+
+/* ── Spinner ── */
+.cp__spinner-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.cp__spinner {
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--cp-accent);
+  border-radius: 50%;
+  animation: cp-spin 1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  will-change: transform;
+}
+
+@keyframes cp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Error ── */
+.cp__error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 20;
+  background: var(--cp-bg);
+}
+
+.cp__error-icon {
+  font-size: 64px;
+  opacity: 0.5;
+  animation: cp-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cp-pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.cp__error-msg {
+  font-size: 17px;
+  color: var(--cp-white-50);
+  margin: 0;
+  text-align: center;
+  max-width: 440px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.cp__error-retry {
+  margin-top: 16px;
+  padding: 16px 42px;
+  background: var(--cp-accent);
+  color: #000;
+  font-family: var(--cp-font);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s var(--cp-ease-out);
+}
+
+.cp__error-retry:hover {
+  background: var(--cp-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 255, 255, 0.15);
+}
+
+/* ── CENTER PLAY BUTTON (Ultra Premium) ── */
+.cp__center-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 90px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.4s var(--cp-ease);
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 0 rgba(255, 255, 255, 0),
+    0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.cp--paused .cp__center-play {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.cp__center-play:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow:
+    0 0 0 8px rgba(255, 255, 255, 0.05),
+    0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.cp__center-play:active {
+  transform: translate(-50%, -50%) scale(1.02);
+}
+
+.cp__center-play svg {
+  width: 36px;
+  height: 36px;
+  fill: var(--cp-white);
+  margin-left: 5px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+  transition: transform 0.25s var(--cp-ease-out);
+}
+
+.cp__center-play:hover svg {
+  transform: scale(1.1);
+}
+
+/* ── TOP BAR (Ultra Premium) ── */
+.cp__top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 40px 48px;
+  background: var(--cp-gradient-top);
+  opacity: 0;
+  transform: translateY(-16px);
+  transition: all 0.4s var(--cp-ease);
+  pointer-events: none;
+  z-index: 8;
+}
+
+.cp__top--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.cp__title-area {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cp__title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--cp-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.cp__chapter-label {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--cp-white-50);
+  white-space: nowrap;
+}
+
+/* ── BOTTOM (Ultra Premium) ── */
+.cp__bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 100px 48px 36px;
+  background: var(--cp-gradient-bot);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: all 0.4s var(--cp-ease);
+  pointer-events: none;
+  z-index: 8;
+}
+
+.cp__bottom--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ── PROGRESS BAR (Ultra Premium) ── */
+.cp__progress {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.cp__progress-rail {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s var(--cp-ease-out);
+  overflow: visible;
+}
+
+.cp__progress:hover .cp__progress-rail,
+.cp__progress--dragging .cp__progress-rail {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.cp__progress-buf {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: inherit;
+  transition: width 0.15s linear;
+}
+
+.cp__progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--cp-accent);
+  border-radius: inherit;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.cp__progress-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0) rotate(-90deg);
+  width: 16px;
+  height: 16px;
+  background: var(--cp-white);
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s var(--cp-ease-out);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cp__progress:hover .cp__progress-thumb,
+.cp__progress--dragging .cp__progress-thumb {
+  transform: translate(-50%, -50%) scale(1) rotate(0deg);
+}
+
+/* Chapter ticks */
+.cp__chapter-tick {
+  position: absolute;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  width: 3px;
+  height: 10px;
+  background: var(--cp-white-50);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Progress tooltip */
+.cp__progress-tip {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  transform: translateX(-50%);
+  background: var(--cp-panel-bg);
+  border: 1px solid var(--cp-white-08);
+  color: var(--cp-white);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 20;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.cp__progress-tip-ch {
+  font-size: 12px;
+  color: var(--cp-white-50);
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* ── CONTROLS BAR ── */
+.cp__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cp__bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp__bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── ICON BUTTONS (Ultra Premium) ── */
+.cp__icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--cp-white);
+  cursor: pointer;
+  padding: 12px;
+  border-radius: var(--cp-radius);
+  transition: all 0.25s var(--cp-ease-out);
+  flex-shrink: 0;
+}
+
+.cp__icon-btn svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.cp__icon-btn:hover {
+  color: var(--cp-white);
+  background: var(--cp-white-08);
+}
+
+.cp__icon-btn:active {
+  background: var(--cp-white-15);
+  transform: scale(0.95);
+}
+
+.cp__icon-btn--on {
+  color: var(--cp-accent);
+}
+
+.cp__icon-btn--on:hover {
+  color: var(--cp-accent);
+}
+
+/* Play button */
+.cp__btn-play {
+  padding: 14px;
+}
+
+.cp__btn-play svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* Skip buttons */
+.cp__btn-skip {
+  position: relative;
+}
+
+.cp__skip-num {
+  position: absolute;
+  bottom: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+/* ── VOLUME ── */
+.cp__vol-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.cp__vol-slider-wrap {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.35s var(--cp-ease);
+}
+
+.cp__vol-wrap:hover .cp__vol-slider-wrap {
+  width: 100px;
+}
+
+.cp__vol-slider {
+  width: 100px;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  display: block;
+}
+
+.cp__vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--cp-white);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s var(--cp-ease-out);
+}
+
+.cp__vol-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.cp__vol-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--cp-white);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.cp__vol-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--cp-accent) var(--vol, 100%), rgba(255, 255, 255, 0.2) var(--vol, 100%));
+  border-radius: 3px;
+  height: 5px;
+}
+
+/* ── TIME ── */
+.cp__time {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding: 0 10px;
+  color: var(--cp-white);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.cp__time-sep {
+  color: var(--cp-white-50);
+  margin: 0 5px;
+}
+
+.cp__time-dur {
+  color: var(--cp-white-50);
+}
+
+/* ── SETTINGS PANEL (Ultra Premium) ── */
+.cp__settings {
+  position: absolute;
+  bottom: 108px;
+  right: 44px;
+  width: 280px;
+  background: var(--cp-panel-bg);
+  border: 1px solid var(--cp-white-08);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 30;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: cp-fade-up 0.3s var(--cp-ease) both;
+  box-shadow:
+    0 16px 64px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@keyframes cp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cp__settings-title {
+  padding: 18px 24px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cp-white-50);
+}
+
+.cp__settings-back {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 24px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--cp-white-04);
+  color: var(--cp-white);
+  font-family: var(--cp-font);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s var(--cp-ease-out);
+}
+
+.cp__settings-back svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.6;
+}
+
+.cp__settings-back:hover {
+  background: var(--cp-white-04);
+}
+
+.cp__settings-options {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cp__settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 24px;
+  background: none;
+  border: none;
+  color: var(--cp-white);
+  font-family: var(--cp-font);
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s var(--cp-ease-out);
+}
+
+.cp__settings-row:hover {
+  background: var(--cp-white-04);
+}
+
+.cp__settings-row--active {
+  color: var(--cp-accent);
+}
+
+.cp__settings-row--active:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cp__settings-row svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.cp__settings-val {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cp-white-50);
+  font-size: 13px;
+}
+
+.cp__settings-row--active .cp__settings-val {
+  color: var(--cp-accent);
+}
+
+.cp__settings-sub {
+  color: var(--cp-white-50);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+/* ── KEYBOARD SHORTCUTS OVERLAY ── */
+.cp__shortcuts-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: cp-fade 0.25s var(--cp-ease) both;
+}
+
+@keyframes cp-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.cp__shortcuts-panel {
+  background: var(--cp-panel-bg);
+  border: 1px solid var(--cp-white-08);
+  border-radius: 16px;
+  padding: 0;
+  width: 400px;
+  max-width: 90vw;
+  overflow: hidden;
+  animation: cp-scale-in 0.3s var(--cp-ease) both;
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@keyframes cp-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cp__shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--cp-white-08);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--cp-white);
+  letter-spacing: -0.01em;
+}
+
+.cp__shortcuts-close {
+  background: none;
+  border: none;
+  color: var(--cp-white-50);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s var(--cp-ease-out);
+  line-height: 1;
+}
+
+.cp__shortcuts-close:hover {
+  color: var(--cp-white);
+  background: var(--cp-white-08);
+}
+
+.cp__shortcuts-list {
+  padding: 14px 0 18px;
+}
+
+.cp__shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 14px 28px;
+  font-size: 15px;
+  color: var(--cp-white-50);
+  transition: background 0.2s var(--cp-ease-out);
+}
+
+.cp__shortcut-row:hover {
+  background: var(--cp-white-04);
+}
+
+kbd.cp__shortcut-key {
+  font-family: 'Outfit', 'SF Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--cp-white-08);
+  border: 1px solid var(--cp-white-08);
+  color: var(--cp-white);
+  padding: 6px 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  min-width: 84px;
+  text-align: center;
+  display: inline-block;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+/* ── TOAST (Ultra Premium) ── */
+.cp-toast-stack {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.cp-toast {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cp-white-08);
+  color: var(--cp-white);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px 32px;
+  border-radius: 50px;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: cp-toast-in 0.2s var(--cp-ease) both, cp-toast-out 0.25s 1.5s var(--cp-ease) both;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes cp-toast-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes cp-toast-out {
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+}
+
+/* ── FULLSCREEN adjustments ── */
+.cp--fs .cp__bottom {
+  padding: 120px 16px 44px !important;
+}
+
+.cp--fs .cp__top {
+  padding: 44px 56px;
+}
+
+.cp--fs .cp__settings {
+  bottom: 120px;
+  right: 52px;
+}
+
+.cp--fs .cp__center-play {
+  width: 110px;
+  height: 110px;
+}
+
+.cp--fs .cp__center-play svg {
+  width: 44px;
+  height: 44px;
+}
+
+/* ── RESPONSIVE ── */
+
+/* ── Tablet / mid-size (≤ 900px) ── */
+@media (max-width: 900px) {
+  .cp__top {
+    padding: 28px 32px;
+    gap: 16px;
+  }
+
+  .cp__bottom {
+    padding: 10px 32px 28px;
+  }
+
+  .cp__title {
+    font-size: 18px;
+  }
+
+  .cp__chapter-label {
+    font-size: 13px;
+  }
+
+  .cp__settings {
+    bottom: 100px;
+    right: 28px;
+    width: 260px;
+  }
+
+  .cp--fs .cp__top {
+    padding: 32px 40px;
+  }
+
+  .cp--fs .cp__bottom {
+    padding: 100px 40px 36px;
+  }
+
+  .cp--fs .cp__settings {
+    bottom: 108px;
+    right: 36px;
+  }
+}
+
+/* ── Small (≤ 600px) ── */
+@media (max-width: 600px) {
+
+  /* Top bar */
+  .cp__top {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+
+  .cp__title {
+    font-size: 14px;
+  }
+
+  .cp__chapter-label {
+    display: none;
+    /* reclaim space on small screens */
+  }
+
+  /* Bottom bar */
+  .cp__bottom {
+    padding: 52px 10px 14px;
+  }
+
+  /* Progress bar */
+  .cp__progress {
+    height: 28px;
+    margin-bottom: 10px;
+  }
+
+  .cp__progress-rail {
+    height: 4px;
+  }
+
+  .cp__progress:hover .cp__progress-rail,
+  .cp__progress--dragging .cp__progress-rail {
+    height: 6px;
+  }
+
+  .cp__progress-thumb {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cp__progress-tip {
+    padding: 7px 11px;
+    font-size: 12px;
+    bottom: calc(100% + 12px);
+  }
+
+  /* Controls bar */
+  .cp__bar {
+    gap: 4px;
+  }
+
+  .cp__bar-left {
+    gap: 2px;
+  }
+
+  .cp__bar-right {
+    gap: 2px;
+  }
+
+  /* Buttons */
+  .cp__icon-btn {
+    padding: 8px;
+  }
+
+  .cp__icon-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cp__btn-play {
+    padding: 9px;
+  }
+
+  .cp__btn-play svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Hide skip number label — too cramped */
+  .cp__skip-num {
+    display: none;
+  }
+
+  /* Volume: collapse the slider on mobile (tap-only) */
+  .cp__vol-wrap:hover .cp__vol-slider-wrap,
+  .cp__vol-slider-wrap {
+    width: 0 !important;
+    pointer-events: none;
+  }
+
+  /* Time: shrink font */
+  .cp__time {
+    font-size: 12px;
+    padding: 0 4px;
+  }
+
+  /* Center play */
+  .cp__center-play {
+    width: 58px;
+    height: 58px;
+  }
+
+  .cp__center-play svg {
+    width: 22px;
+    height: 22px;
+    margin-left: 4px;
+  }
+
+  /* Settings: full-width anchored to bottom */
+  .cp__settings {
+    width: calc(100% - 28px);
+    left: 14px;
+    right: 14px;
+    bottom: 90px;
+  }
+
+  .cp--fs .cp__settings {
+    bottom: 96px;
+  }
+
+  /* Shortcuts panel */
+  .cp__shortcuts-panel {
+    width: calc(100vw - 28px);
+  }
+
+  .cp__shortcuts-header {
+    padding: 18px 20px;
+    font-size: 15px;
+  }
+
+  .cp__shortcut-row {
+    padding: 11px 20px;
+    font-size: 13px;
+    gap: 14px;
+  }
+
+  kbd.cp__shortcut-key {
+    min-width: 68px;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}
+
+/* ── Extra-small (≤ 420px) ── */
+@media (max-width: 420px) {
+  .cp__top {
+    padding: 12px 10px;
+    gap: 8px;
+  }
+
+  .cp__title {
+    font-size: 13px;
+  }
+
+  .cp__bottom {
+    padding: 0px 8px 10px;
+  }
+
+  .cp__icon-btn {
+    padding: 7px;
+  }
+
+  .cp__icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cp__btn-play {
+    padding: 8px;
+  }
+
+  .cp__btn-play svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .cp__time {
+    font-size: 11px;
+    padding: 0 2px;
+    letter-spacing: 0;
+  }
+
+  .cp__time-sep {
+    margin: 0 3px;
+  }
+
+  .cp__center-play {
+    width: 50px;
+    height: 50px;
+  }
+
+  .cp__center-play svg {
+    width: 18px;
+    height: 18px;
+    margin-left: 3px;
+  }
+
+  .cp__settings {
+    width: calc(100% - 16px);
+    left: 8px;
+    right: 8px;
+    bottom: 82px;
+  }
+
+  /* Stack right-side buttons: hide PiP on tiny screens */
+  .cp__bar-right>button:nth-child(2) {
+    display: none;
+  }
+}
+
+/* ── Touch: larger tap targets & always-visible thumb ── */
+@media (hover: none) and (pointer: coarse) {
+  .cp__icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Always show progress thumb on touch */
+  .cp__progress-thumb {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+
+  /* Touch devices: always expand volume slider slightly */
+  .cp__vol-slider-wrap {
+    width: 0 !important;
+  }
+
+  /* Increase progress rail hit area */
+  .cp__progress {
+    height: 36px;
+  }
+
+  .cp__progress-rail {
+    height: 5px;
+  }
+}
+
+/* ── Scrollbar in settings ── */
+.cp__settings-options::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cp__settings-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cp__settings-options::-webkit-scrollbar-thumb {
+  background: var(--cp-white-15);
+  border-radius: 2px;
+}
+
+.cp__settings-options::-webkit-scrollbar-thumb:hover {
+  background: var(--cp-white-30);
+}

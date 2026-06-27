@@ -1,0 +1,1365 @@
+/* ================================
+   Watch.css — Fully Responsive
+   ================================ */
+
+/* ---- Base ---- */
+.watch-page {
+  min-height: 100vh;
+  background: #000;
+  font-family: inherit;
+  position: relative;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.watch-page::-webkit-scrollbar {
+  display: none;
+}
+
+/* ================================
+   HEADER
+   ================================ */
+.watch-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 2.2rem 40px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.back-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 100px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  z-index: 1000;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: translateX(-4px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.episodes-btn-header {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 100px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.episodes-btn-header:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: translateX(4px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.watch-logo {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: var(--text-primary, #fff);
+  text-transform: uppercase;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-decoration: none;
+}
+
+.watch-logo:hover {
+  opacity: 0.7;
+}
+
+/* ================================
+   LOADING & ERROR - Optimized
+   ================================ */
+.watch-loading,
+.watch-error {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background: #000;
+  color: #fff;
+  position: fixed;
+  z-index: 100;
+}
+
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg) translateZ(0); }
+}
+
+.watch-error h2 {
+  font-size: 2rem;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.watch-error button {
+  background: #fff;
+  color: #000;
+  font-weight: 600;
+  padding: 14px 32px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.watch-error button:hover {
+  transform: scale(1.05);
+}
+
+/* ================================
+   PLAYER — DESKTOP / LANDSCAPE
+   Full-screen fixed player; overlays scroll above
+   ================================ */
+.player-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  background: #000;
+  display: flex;
+  overflow: hidden;
+}
+
+/* On mobile portrait we shrink the player to 16:9 at top */
+@media (max-width: 768px) and (orientation: portrait) {
+  .player-container {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 56.25vw; /* 16:9 */
+  }
+}
+
+/* Tablet portrait (769–1024) — keep player fixed but allow overlay below */
+@media (min-width: 481px) and (max-width: 768px) and (orientation: portrait) {
+  .player-container {
+    position: relative;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+.player-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ================================
+   PAUSE INFO OVERLAY — Netflix style
+   Desktop / landscape only
+   ================================ */
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 5%;
+  pointer-events: none;
+  box-sizing: border-box;
+  /* Left-heavy gradient — content sits on left, backdrop bleeds right */
+  background: linear-gradient(
+    105deg,
+    rgba(0,0,0,0.92) 0%,
+    rgba(0,0,0,0.75) 30%,
+    rgba(0,0,0,0.35) 55%,
+    rgba(0,0,0,0.05) 75%,
+    transparent 100%
+  );
+  animation: pause-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pause-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Washed out backdrop image */
+.pause-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) brightness(0.25);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.348) 60%, rgba(0, 0, 0, 0.504) 90%);
+  /* mask-image: linear-gradient(to right, transparent 0%, transparent 30%, black 60%, black 100%); */
+  z-index: -1;
+}
+
+.pause-info {
+  max-width: min(520px, 46%);
+  animation: pause-slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pause-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Eyebrow — "SERIES · 2023" */
+.pause-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 10px;
+}
+
+/* Big title */
+.pause-main-title {
+  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.0;
+  margin: 0 0 14px 0;
+  letter-spacing: -0.03em;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+/* Episode label row */
+.pause-ep-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pause-ep-badge {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+}
+
+.pause-ep-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Meta row */
+.pause-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.pause-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f5c518;
+}
+
+.pause-star-icon {
+  width: 14px;
+  height: 14px;
+  color: #f5c518;
+  flex-shrink: 0;
+}
+
+.pause-meta-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 4px;
+  color: rgba(255,255,255,0.8);
+}
+
+.pause-genre-pill {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+/* Overview text */
+.pause-overview {
+  font-size: clamp(0.8rem, 1.3vw, 0.95rem);
+  line-height: 1.6;
+  color: rgba(255,255,255,0.75);
+  margin: 0 0 20px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Progress bar */
+.pause-progress-wrap {
+  margin-bottom: 22px;
+  width: 100%;
+}
+
+.pause-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.pause-progress-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 2px;
+  transition: width 0.5s linear;
+  box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+.pause-progress-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.3px;
+}
+
+/* Action buttons */
+.pause-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pause-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.pause-list-btn:hover  {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.pause-list-btn:active { transform: translateY(0); }
+
+.pause-list-btn.in-list {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.5);
+}
+
+.pause-list-btn svg { font-size: 0.9rem; }
+
+/* Hide on all mobile sizes — portrait AND landscape */
+@media (max-width: 900px) {
+  .pause-overlay { display: none; }
+}
+
+
+/* ================================
+   MOBILE PORTRAIT STATIC OVERLAY
+   Sits below the 16:9 player block.
+   NOT scrollable — static content.
+   ================================ */
+.mobile-scroll-overlay {
+  position: relative;
+  z-index: 50;
+  width: 100%;
+  /* Overlay is NOT scrollable — height is auto/natural */
+  overflow: hidden;
+  background: #000;
+}
+
+.mobile-overlay-gradient {
+  background: linear-gradient(to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.7) 30px,
+    #000 80px);
+  padding-top: 0;
+  padding-bottom: 32px;
+}
+
+.mobile-overlay-content {
+  padding: 16px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Source + Episodes row */
+.mobile-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.mobile-source-controls {
+  position: relative;
+}
+
+.mobile-source-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-source-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+.source-menu--mobile {
+  /* override position for mobile: drop down inside overlay */
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 200;
+}
+
+.mobile-episodes-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mobile-episodes-btn:hover { transform: scale(1.04); }
+
+/* Info section */
+.mobile-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.mobile-watch-title {
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.75) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.15;
+}
+
+.mobile-watch-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.mobile-ep-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.3px;
+}
+
+.mobile-watch-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mobile-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-list-btn:hover { background: rgba(255,255,255,0.22); }
+
+.mobile-list-btn.in-list {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.5);
+}
+
+.mobile-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-icon-btn:hover { background: rgba(255,255,255,0.15); }
+
+.mobile-watch-overview {
+  font-size: clamp(0.8rem, 3.2vw, 0.95rem);
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.65;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mobile-watch-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+/* ================================
+   EPISODES DRAWER
+   ================================ */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.episodes-drawer {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.episodes-drawer::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.episodes-drawer::after {
+  content: '';
+  position: absolute;
+  bottom: -200px;
+  right: -100px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.episodes-drawer.open { right: 0; }
+
+.drawer-header {
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.drawer-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
+
+.drawer-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: rotate(90deg) scale(1.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---- Season Tabs ---- */
+.tabs-navigation-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  mask-image: linear-gradient(to right, transparent 0%, black 40px, black calc(100% - 40px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 40px, black calc(100% - 40px), transparent 100%);
+}
+
+.nav-arrow-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6;
+}
+
+.nav-arrow-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.nav-arrow-btn.left  { left: 4px; }
+.nav-arrow-btn.right { right: 4px; }
+
+.season-tabs {
+  padding: 14px 40px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.season-tabs::-webkit-scrollbar { display: none; }
+
+.season-tab {
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.season-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.season-tab.active {
+  background: #fff;
+  color: #000;
+  border-color: transparent;
+  box-shadow: 0 4px 20px rgba(255,255,255,0.3), 0 0 40px rgba(255,255,255,0.1);
+}
+
+/* ---- Episode List ---- */
+.episode-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+}
+
+.episode-list::-webkit-scrollbar       { width: 4px; }
+.episode-list::-webkit-scrollbar-track { background: transparent; }
+.episode-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+.episode-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Drawer Loader - Optimized */
+.drawer-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 0;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* ================================
+   EPISODE CARD
+   ================================ */
+.episode-card {
+  display: flex;
+  gap: 14px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  overflow: hidden;
+  position: relative;
+  height: 96px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.episode-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.episode-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px) scale(1.005);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.episode-card.active {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.2);
+  height: 140px;
+  box-shadow: 0 8px 32px rgba(255,255,255,0.05), inset 0 0 30px rgba(255,255,255,0.02);
+}
+
+.episode-card.active::before { opacity: 1; }
+
+/* Thumbnail */
+.ep-thumbnail {
+  position: relative;
+  min-width: 150px;
+  width: 150px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px 0 0 12px;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.ep-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.episode-card:hover .ep-thumbnail img { transform: scale(1.08); }
+
+.ep-number-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: 26px;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.episode-card:hover .ep-number-badge,
+.episode-card.active .ep-number-badge {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 4px 12px rgba(255,255,255,0.4);
+}
+
+/* Playing Overlay */
+.playing-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.playing-overlay svg {
+  width: 28px;
+  height: 28px;
+  fill: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+.episode-card.active .playing-overlay {
+  opacity: 1;
+  background: rgba(255,255,255,0.1);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%,100% { background: rgba(255,255,255,0.08); }
+  50%      { background: rgba(255,255,255,0.15); }
+}
+
+/* Episode Info */
+.ep-info {
+  flex: 1;
+  padding: 12px 14px 12px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ep-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.episode-card:hover .ep-title,
+.episode-card.active .ep-title { color: #fff; }
+
+.ep-runtime {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ep-overview {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.3s ease;
+}
+
+.episode-card:hover .ep-overview { color: rgba(255,255,255,0.6); }
+
+.ep-playing-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 4px 10px;
+  background: #fff;
+  color: #000;
+  border-radius: 6px;
+  margin-top: 8px;
+  width: fit-content;
+  box-shadow: 0 4px 20px rgba(255,255,255,0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(0.98); }
+}
+
+/* ================================
+   RESPONSIVE — TABLET LANDSCAPE (1024px)
+   ================================ */
+@media (max-width: 1024px) {
+  .watch-title { font-size: clamp(1.8rem, 4vw, 3rem); }
+  .overlay-content { max-width: 90%; padding: 0 32px; }
+}
+
+/* ================================
+   RESPONSIVE — TABLET PORTRAIT / SMALL DESKTOP (768px)
+   ================================ */
+@media (max-width: 768px) {
+  .watch-header { padding: 1.4rem 20px; }
+
+  /* Hide text labels, show icon-only buttons */
+  .back-btn span,
+  .episodes-btn-header span {
+    display: none;
+  }
+
+  .back-btn,
+  .episodes-btn-header {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .watch-logo { font-size: 1.3rem; }
+
+  /* Drawer takes full width on mobile */
+  .episodes-drawer {
+    max-width: 100%;
+    width: 100%;
+    right: -100%;
+  }
+
+  .drawer-header { padding: 20px 18px; }
+  .episode-list  { padding: 12px 16px; }
+  .season-tabs   { padding: 12px 36px; }
+}
+
+/* ================================
+   RESPONSIVE — MOBILE (480px)
+   ================================ */
+@media (max-width: 480px) {
+  .watch-header {
+    padding: 0.9rem 14px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
+  }
+
+  .back-btn,
+  .episodes-btn-header {
+    width: 38px;
+    height: 38px;
+  }
+
+  .watch-logo { font-size: 1.1rem; letter-spacing: -1.5px; }
+
+  .ep-thumbnail { min-width: 110px; width: 110px; }
+  .ep-info      { padding: 10px 10px 10px 0; }
+  .ep-title     { font-size: 13px; }
+
+  .ep-overview {
+    font-size: 11px;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .ep-runtime { padding: 2px 6px; font-size: 10px; }
+
+  .episode-card        { height: 84px; border-radius: 12px; gap: 10px; }
+  .episode-card.active { height: 124px; }
+}
+
+/* ================================
+   RESPONSIVE — SMALL MOBILE (360px)
+   ================================ */
+@media (max-width: 360px) {
+  .ep-thumbnail { min-width: 88px; width: 88px; }
+  .ep-title     { font-size: 12px; }
+  .ep-overview  { display: none; }
+
+  .mobile-overlay-content { padding: 12px 12px 0; }
+  .mobile-watch-title     { font-size: 1.25rem; }
+}
+
+/* ================================
+   LANDSCAPE PHONES
+   Keep player full-screen, hide mobile overlay
+   ================================ */
+@media (max-width: 900px) and (orientation: landscape) {
+  .player-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .mobile-scroll-overlay { display: none; }
+
+  .watch-header {
+    padding: 0.8rem 20px;
+  }
+
+  .back-btn,
+  .episodes-btn-header {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 13px;
+  }
+
+  .back-btn span,
+  .episodes-btn-header span { display: none; }
+}
+
+/* ================================
+   SAFE AREA / NOTCH SUPPORT
+   ================================ */
+@supports (padding: max(0px)) {
+  .watch-header {
+    padding-left: max(40px, env(safe-area-inset-left));
+    padding-right: max(40px, env(safe-area-inset-right));
+  }
+
+  @media (max-width: 768px) {
+    .watch-header {
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+      padding-top: max(1.4rem, env(safe-area-inset-top));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .watch-header {
+      padding-left: max(14px, env(safe-area-inset-left));
+      padding-right: max(14px, env(safe-area-inset-right));
+    }
+  }
+
+  .episodes-drawer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-scroll-overlay {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.stream-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+/* ==============================
+   EXPERIENCE LOADER - Popcorn GIF
+   ============================== */
+.stream-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: #08080a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Backdrop as subtle background */
+.stream-loading-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) brightness(0.4);
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.experience-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+/* Popcorn GIF */
+.loader-popcorn {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+/* Loading text */
+.loader-text-container {
+  text-align: center;
+}
+
+.loader-phase-text {
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  animation: text-fade 0.4s ease-out;
+  color: var(--text-primary);
+}
+
+.loader-subtext {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+}
+
+@keyframes text-fade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle loading line */
+.loader-line-container {
+  width: 120px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.loader-line-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: line-progress 1.8s ease-in-out infinite;
+}
+
+@keyframes line-progress {
+  0% { width: 0%; margin-left: 0%; }
+  50% { width: 60%; margin-left: 20%; }
+  100% { width: 0%; margin-left: 100%; }
+}
