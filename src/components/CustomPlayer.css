@@ -1054,17 +1054,20 @@ kbd.cp__shortcut-key {
 }
 
 /* ── FULLSCREEN adjustments ── */
+/* env(safe-area-inset-*) keeps controls clear of notches, Dynamic Island,
+   and rounded corners on full-bleed fullscreen video on real devices.
+   Falls back to 0px automatically on devices without a safe-area inset. */
 .cp--fs .cp__bottom {
-  padding: 120px 16px 44px !important;
+  padding: 120px calc(16px + env(safe-area-inset-right)) calc(44px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)) !important;
 }
 
 .cp--fs .cp__top {
-  padding: 44px 56px;
+  padding: calc(44px + env(safe-area-inset-top)) calc(56px + env(safe-area-inset-right)) 44px calc(56px + env(safe-area-inset-left));
 }
 
 .cp--fs .cp__settings {
-  bottom: 120px;
-  right: 52px;
+  bottom: calc(120px + env(safe-area-inset-bottom));
+  right: calc(52px + env(safe-area-inset-right));
 }
 
 .cp--fs .cp__center-play {
@@ -1105,16 +1108,16 @@ kbd.cp__shortcut-key {
   }
 
   .cp--fs .cp__top {
-    padding: 32px 40px;
+    padding: calc(32px + env(safe-area-inset-top)) calc(40px + env(safe-area-inset-right)) 32px calc(40px + env(safe-area-inset-left));
   }
 
   .cp--fs .cp__bottom {
-    padding: 100px 40px 36px;
+    padding: 100px calc(40px + env(safe-area-inset-right)) calc(36px + env(safe-area-inset-bottom)) calc(40px + env(safe-area-inset-left));
   }
 
   .cp--fs .cp__settings {
-    bottom: 108px;
-    right: 36px;
+    bottom: calc(108px + env(safe-area-inset-bottom));
+    right: calc(36px + env(safe-area-inset-right));
   }
 }
 
@@ -1344,11 +1347,104 @@ kbd.cp__shortcut-key {
   }
 }
 
+/* ── Short-height landscape (phones rotated sideways) ──
+   Width-based breakpoints alone under-serve this case: a phone in landscape
+   is often *wider* than 600/900px yet only 320-430px tall, so the portrait
+   paddings above (built for tall/narrow viewports) eat too much of the
+   video. Target the scarce dimension directly. */
+@media (max-height: 480px) and (orientation: landscape) {
+  .cp__top {
+    padding: 10px 18px;
+    gap: 10px;
+  }
+
+  .cp__chapter-label {
+    display: none;
+  }
+
+  .cp__bottom {
+    padding: 6px 18px 10px;
+  }
+
+  .cp__progress {
+    height: 22px;
+    margin-bottom: 2px;
+  }
+
+  .cp__progress-tip {
+    bottom: calc(100% + 8px);
+  }
+
+  .cp__bar-left,
+  .cp__bar-right {
+    gap: 0;
+  }
+
+  .cp__icon-btn {
+    padding: 6px;
+  }
+
+  .cp__icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cp__btn-play {
+    padding: 7px;
+  }
+
+  .cp__btn-play svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .cp__time {
+    font-size: 11px;
+    padding: 0 4px;
+  }
+
+  .cp__center-play {
+    width: 46px;
+    height: 46px;
+  }
+
+  .cp__center-play svg {
+    width: 16px;
+    height: 16px;
+    margin-left: 3px;
+  }
+
+  /* Cap the settings/shortcuts panels to the viewport so they can't get
+     clipped above the top edge on a short screen; scroll internally instead. */
+  .cp__settings {
+    bottom: 54px;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+
+  .cp__shortcuts-panel {
+    max-height: 90vh;
+  }
+
+  .cp__shortcuts-list {
+    max-height: calc(90vh - 70px);
+    overflow-y: auto;
+  }
+}
+
+/* Belt-and-braces: keep the settings panel on-screen at any height, not
+   just the short-landscape case above (e.g. a long subtitle-language list
+   opened on a mid-height window). */
+.cp__settings {
+  max-height: min(420px, calc(100vh - 40px));
+  overflow-y: auto;
+}
+
 /* ── Touch: larger tap targets & always-visible thumb ── */
 @media (hover: none) and (pointer: coarse) {
   .cp__icon-btn {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   /* Always show progress thumb on touch */
@@ -1414,6 +1510,17 @@ kbd.cp__shortcut-key {
     bottom: 100px;
     right: 28px;
     width: 260px;
+  }
+
+  /* A hover-capable pointer (e.g. a resized desktop browser window, not a
+     touch device) still gets the hover-flyout slider — just narrower so it
+     can't push past the edge of a cramped container. */
+  .cp__vol-wrap:hover .cp__vol-slider-wrap {
+    width: 72px;
+  }
+
+  .cp__vol-slider {
+    width: 72px;
   }
 }
 
@@ -1578,6 +1685,40 @@ kbd.cp__shortcut-key {
 
   .cp__btn-pip {
     display: none;
+  }
+}
+
+/* ── Very small / foldable cover screens (≤ 300px) ── */
+@media (max-width: 300px) {
+  .cp__bar-right .cp__icon-btn:not(.cp__btn-play) {
+    padding: 5px;
+  }
+
+  .cp__vol-wrap {
+    display: none;
+    /* No room for a volume control at this width; mute is still reachable
+       via the keyboard 'M' shortcut and the OS volume buttons. */
+  }
+
+  .cp__time {
+    font-size: 10px;
+    padding: 0 2px;
+  }
+
+  .cp__settings-row,
+  .cp__settings-back {
+    padding: 14px 16px;
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .cp *,
+  .cp *::before,
+  .cp *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
