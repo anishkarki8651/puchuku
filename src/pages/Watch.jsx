@@ -187,7 +187,7 @@ function Watch() {
  const fetchStreamUrl = useCallback(async () => {
   setIsLoadingStream(true);
   try {
-    let STREAM_API_URL = import.meta.env.VITE_STREAM_API_URL || 'https://puchuku.anish-karki.com.np';
+    let STREAM_API_URL = import.meta.env.VITE_STREAM_API_URL || 'https://stream.anish-karki.com.np';
 
     const isLocal = STREAM_API_URL.includes('localhost') || STREAM_API_URL.includes('127.0.0.1');
 

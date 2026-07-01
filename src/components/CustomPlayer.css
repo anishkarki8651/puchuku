@@ -39,6 +39,12 @@
   user-select: none;
   -webkit-user-select: none;
   transform: translateZ(0);
+  /* Makes .cp a container query context — layout below can respond to the
+     player's own rendered width, not just the viewport. This keeps the
+     compact mobile layout correct even when the player sits in a narrow
+     desktop panel (sidebar, modal, split view) on a wide screen. */
+  container-type: inline-size;
+  container-name: cp-player;
 }
 
 /* When the player-container is fixed full-viewport (landscape / desktop),
@@ -533,6 +539,11 @@ video::cue {
   position: relative;
 }
 
+/* Hide keyboard shortcut button */
+.cp__btn-shortcuts {
+  display: none;
+}
+
 .cp__skip-num {
   position: absolute;
   bottom: 5px;
@@ -746,6 +757,138 @@ video::cue {
   color: var(--cp-white-50);
   font-size: 12px;
   margin-left: 6px;
+}
+
+/* ── VOLUME BOOST ── */
+.cp__boost-panel {
+  padding: 8px 24px 22px;
+}
+
+.cp__boost-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  color: var(--cp-white);
+  font-size: 15px;
+}
+
+.cp__toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--cp-white-15);
+  cursor: pointer;
+  transition: background 0.25s var(--cp-ease-out);
+  flex-shrink: 0;
+}
+
+.cp__toggle--on {
+  background: var(--cp-accent);
+}
+
+.cp__toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--cp-white);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.25s var(--cp-ease-out), background 0.25s var(--cp-ease-out);
+}
+
+.cp__toggle--on .cp__toggle-thumb {
+  transform: translateX(18px);
+  background: #000;
+}
+
+.cp__boost-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+  transition: opacity 0.2s var(--cp-ease-out);
+}
+
+.cp__boost-slider-row--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cp__boost-slider {
+  flex: 1;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.cp__boost-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--cp-white);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s var(--cp-ease-out);
+}
+
+.cp__boost-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.cp__boost-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--cp-white);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.cp__boost-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--cp-accent) var(--boost, 50%), rgba(255, 255, 255, 0.2) var(--boost, 50%));
+  border-radius: 3px;
+  height: 5px;
+}
+
+.cp__boost-value {
+  min-width: 42px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cp-white-70);
+}
+
+.cp__boost-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cp-white-50);
+}
+
+.cp__boost-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 0px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 4px;
+  background: var(--cp-accent);
+  color: #000;
+  pointer-events: none;
+  letter-spacing: -0.02em;
 }
 
 /* ── KEYBOARD SHORTCUTS OVERLAY ── */
@@ -993,6 +1136,10 @@ kbd.cp__shortcut-key {
     /* reclaim space on small screens */
   }
 
+  .cp__btn-shortcuts {
+    display: none;
+  }
+
   /* Bottom bar */
   .cp__bottom {
     padding: 52px 10px 14px;
@@ -1001,7 +1148,7 @@ kbd.cp__shortcut-key {
   /* Progress bar */
   .cp__progress {
     height: 28px;
-    margin-bottom: 10px;
+    margin-bottom: 0px !important;
   }
 
   .cp__progress-rail {
@@ -1061,11 +1208,20 @@ kbd.cp__shortcut-key {
     display: none;
   }
 
-  /* Volume: collapse the slider on mobile (tap-only) */
-  .cp__vol-wrap:hover .cp__vol-slider-wrap,
+  /* Volume: on touch, the slider only opens when explicitly tapped
+     (see .cp__vol-wrap--open below) — hover has no meaning here. */
   .cp__vol-slider-wrap {
     width: 0 !important;
     pointer-events: none;
+  }
+
+  .cp__vol-wrap--open .cp__vol-slider-wrap {
+    width: 64px !important;
+    pointer-events: auto !important;
+  }
+
+  .cp__vol-wrap--open .cp__vol-slider {
+    width: 64px;
   }
 
   /* Time: shrink font */
@@ -1182,8 +1338,8 @@ kbd.cp__shortcut-key {
     bottom: 82px;
   }
 
-  /* Stack right-side buttons: hide PiP on tiny screens */
-  .cp__bar-right>button:nth-child(2) {
+  /* Hide PiP on tiny screens to leave room for the essentials */
+  .cp__btn-pip {
     display: none;
   }
 }
@@ -1200,9 +1356,19 @@ kbd.cp__shortcut-key {
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
   }
 
-  /* Touch devices: always expand volume slider slightly */
+  /* Touch devices: volume slider opens only via explicit tap (see JSX handleVolButtonClick) */
   .cp__vol-slider-wrap {
     width: 0 !important;
+    pointer-events: none;
+  }
+
+  .cp__vol-wrap--open .cp__vol-slider-wrap {
+    width: 64px !important;
+    pointer-events: auto !important;
+  }
+
+  .cp__vol-wrap--open .cp__vol-slider {
+    width: 64px;
   }
 
   /* Increase progress rail hit area */
@@ -1213,6 +1379,222 @@ kbd.cp__shortcut-key {
   .cp__progress-rail {
     height: 5px;
   }
+}
+
+/* Hide keyboard shortcut button */
+.cp__btn-shortcuts {
+  display: none !important;
+}
+
+/* ── CONTAINER-QUERY LAYER ──
+   Mirrors the viewport breakpoints above, but keyed to the player's own
+   rendered width via `container-type` on .cp. The @media rules above cover
+   the common full-bleed case; these additionally kick in whenever the
+   player is embedded in a narrower box (sidebar, modal, split-view) on an
+   otherwise wide desktop viewport, where @media alone would never fire. */
+@container cp-player (max-width: 900px) {
+  .cp__top {
+    padding: 28px 32px;
+    gap: 16px;
+  }
+
+  .cp__bottom {
+    padding: 10px 32px 28px;
+  }
+
+  .cp__title {
+    font-size: 18px;
+  }
+
+  .cp__chapter-label {
+    font-size: 13px;
+  }
+
+  .cp__settings {
+    bottom: 100px;
+    right: 28px;
+    width: 260px;
+  }
+}
+
+@container cp-player (max-width: 600px) {
+  .cp__top {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+
+  .cp__title {
+    font-size: 14px;
+  }
+
+  .cp__chapter-label,
+  .cp__btn-shortcuts {
+    display: none;
+  }
+
+  .cp__bottom {
+    padding: 52px 10px 14px;
+  }
+
+  .cp__progress {
+    height: 28px;
+    margin-bottom: 0px;
+  }
+
+  .cp__progress-rail {
+    height: 4px;
+  }
+
+  .cp__progress:hover .cp__progress-rail,
+  .cp__progress--dragging .cp__progress-rail {
+    height: 6px;
+  }
+
+  .cp__progress-thumb {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cp__progress-tip {
+    padding: 7px 11px;
+    font-size: 12px;
+    bottom: calc(100% + 12px);
+  }
+
+  .cp__bar {
+    gap: 4px;
+  }
+
+  .cp__bar-left,
+  .cp__bar-right {
+    gap: 2px;
+  }
+
+  .cp__icon-btn {
+    padding: 8px;
+  }
+
+  .cp__icon-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cp__btn-play {
+    padding: 9px;
+  }
+
+  .cp__btn-play svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cp__skip-num {
+    display: none;
+  }
+
+  .cp__time {
+    font-size: 12px;
+    padding: 0 4px;
+  }
+
+  .cp__center-play {
+    width: 58px;
+    height: 58px;
+  }
+
+  .cp__center-play svg {
+    width: 22px;
+    height: 22px;
+    margin-left: 4px;
+  }
+
+  .cp__settings {
+    width: calc(100% - 28px);
+    left: 14px;
+    right: 14px;
+    bottom: 90px;
+  }
+}
+
+@container cp-player (max-width: 420px) {
+  .cp__top {
+    padding: 12px 10px;
+    gap: 8px;
+  }
+
+  .cp__title {
+    font-size: 13px;
+  }
+
+  .cp__bottom {
+    padding: 0px 8px 10px;
+  }
+
+  .cp__icon-btn {
+    padding: 7px;
+  }
+
+  .cp__icon-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cp__btn-play {
+    padding: 8px;
+  }
+
+  .cp__btn-play svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .cp__time {
+    font-size: 11px;
+    padding: 0 2px;
+    letter-spacing: 0;
+  }
+
+  .cp__time-sep {
+    margin: 0 3px;
+  }
+
+  .cp__center-play {
+    width: 50px;
+    height: 50px;
+  }
+
+  .cp__center-play svg {
+    width: 18px;
+    height: 18px;
+    margin-left: 3px;
+  }
+
+  .cp__settings {
+    width: calc(100% - 16px);
+    left: 8px;
+    right: 8px;
+    bottom: 82px;
+  }
+
+  .cp__btn-pip {
+    display: none;
+  }
+}
+
+/* ── FOCUS VISIBILITY (keyboard navigation) ── */
+.cp__icon-btn:focus-visible,
+.cp__center-play:focus-visible,
+.cp__progress:focus-visible,
+.cp__settings-row:focus-visible,
+.cp__settings-back:focus-visible,
+.cp__error-retry:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+.cp__vol-slider:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 3px;
 }
 
 /* ── Scrollbar in settings ── */

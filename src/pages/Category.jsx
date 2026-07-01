@@ -467,6 +467,7 @@ function Category() {
           align-items: center;
           justify-content: center;
           opacity: 0;
+          height: 100%;
           transition: opacity 0.3s ease;
         }
         

@@ -55,6 +55,9 @@ const Icons = {
   Loop: () => (
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" /></svg>
   ),
+  Boost: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z" /></svg>
+  ),
 };
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -71,7 +74,7 @@ const fmt = (s) => {
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ messages }) {
   return (
-    <div className="cp-toast-stack">
+    <div className="cp-toast-stack" aria-live="polite" role="status">
       {messages.map((msg) => (
         <div key={msg.id} className="cp-toast">{msg.text}</div>
       ))}
@@ -130,6 +133,19 @@ function CustomPlayer({
   const [toasts, setToasts] = useState([]);
   const [subtitlesReady, setSubtitlesReady] = useState(false);
   const onReadyFiredRef = useRef(false);
+  const [volOpen, setVolOpen] = useState(false);
+  const lastTapRef = useRef({ time: 0, zone: null });
+  const tapTimeoutRef = useRef(null);
+  const controlsShownRef = useRef(true);
+
+  // Volume boost (Web Audio API gain stage, up to 2x, limited to avoid clipping)
+  const audioCtxRef = useRef(null);
+  const sourceNodeRef = useRef(null);
+  const gainNodeRef = useRef(null);
+  const compressorNodeRef = useRef(null);
+  const [boostEnabled, setBoostEnabled] = useState(false);
+  const [boostLevel, setBoostLevel] = useState(1.5); // 1.0 (100%) – 2.0 (200%)
+  const [boostSupported, setBoostSupported] = useState(true);
 
   const toast = useCallback((text) => {
     const id = ++toastIdRef.current;
@@ -151,19 +167,28 @@ function CustomPlayer({
     if (!video || !src) return;
     setLoading(true);
     setError(null);
+    setCurrentQuality(-1); // always start each new source in Auto
 
     const cleanup = () => {
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
 
-    if (Hls.isSupported()) {
+    const isHls = src.includes('.m3u8') || src.includes('m3u8');
+
+    if (isHls && Hls.isSupported()) {
       cleanup();
       const hls = new Hls({
         enableWorker: true,
         backBufferLength: 30,        // lower buffer pressure on small VPS
         maxBufferLength: 30,
         startLevel: -1,
+        // HLS.js has no real bandwidth data on startup, so with startLevel: -1
+        // it falls back to a conservative internal guess (~500kbps by default)
+        // and picks the lowest rendition until it measures a few real segments.
+        // Assume a reasonable broadband connection instead so "Auto" starts
+        // near the top and steps down only if actual throughput is worse.
+        abrEwmaDefaultEstimate: 5000000, // ~5 Mbps initial assumption
         fragLoadingMaxRetry: 4,
         fragLoadingRetryDelay: 1000,
         fragLoadingMaxRetryTimeout: 8000,
@@ -182,6 +207,33 @@ function CustomPlayer({
           id: i, label: l.height ? `${l.height}p` : `Level ${i}`, bitrate: l.bitrate,
         }));
         setQualities([{ id: -1, label: 'Auto' }, ...levels]);
+
+        // Auto mode should still open on ~720p rather than whatever the ABR
+        // cold-start guess lands on. Pick the highest rung that's <= 720p
+        // (or the lowest rung available if every rendition is above 720p),
+        // force just the first fragment to that level, then immediately hand
+        // control back to the adaptive engine so playback keeps auto-adjusting
+        // from there. The Settings UI still shows "Auto" throughout — this
+        // never becomes a manual pin.
+        let startIdx = -1;
+        let bestHeight = -1;
+        data.levels.forEach((l, i) => {
+          if (l.height && l.height <= 720 && l.height > bestHeight) {
+            bestHeight = l.height;
+            startIdx = i;
+          }
+        });
+        if (startIdx === -1) {
+          // Every rung is above 720p — fall back to the lowest available
+          startIdx = data.levels.reduce(
+            (lowest, l, i, arr) => (l.height < arr[lowest].height ? i : lowest), 0
+          );
+        }
+        hls.currentLevel = startIdx; // forces this pick for the next fragment only
+        hls.once(Hls.Events.LEVEL_SWITCHED, () => {
+          hls.loadLevel = -1; // release the pin, ABR takes over from here
+        });
+
         setTimeout(() => {
           if (startTime > 0 && videoRef.current) videoRef.current.currentTime = startTime;
         }, 100);
@@ -209,7 +261,13 @@ function CustomPlayer({
             cleanup();
         }
       });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+      setLoading(false);
+      if (startTime > 0) video.currentTime = startTime;
+      if (autoPlay) video.play().catch(() => {});
+    } else if (!isHls) {
+      // Direct mp4 video file
       video.src = src;
       setLoading(false);
       if (startTime > 0) video.currentTime = startTime;
@@ -283,6 +341,8 @@ function CustomPlayer({
   }, []);
 
   useEffect(() => { if (videoRef.current) videoRef.current.loop = isLooping; }, [isLooping]);
+
+  useEffect(() => () => clearTimeout(tapTimeoutRef.current), []);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -400,12 +460,144 @@ function CustomPlayer({
     toast(`${sec > 0 ? '+' : ''}${sec}s`);
   }, [toast]);
 
+  // Touch devices only — used to decide tap-to-reveal vs tap-to-play,
+  // and whether the volume icon should open a slider instead of toggling mute.
+  const isCoarsePointer = useCallback(() => {
+    return typeof window !== 'undefined' &&
+      window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+  }, []);
+
+  // Single tap on the video: reveals controls if hidden, otherwise toggles play.
+  // Double tap on the left/right third: skips ±10s. Double tap in the middle: fullscreen.
+  // This mirrors the tap conventions of YouTube/Netflix mobile players and stops a
+  // "just checking the controls" tap from accidentally pausing playback.
+  const handleVideoTap = useCallback((e) => {
+    const touch = e.changedTouches?.[0];
+    const container = playerRef.current;
+    if (!touch || !container) return;
+    e.preventDefault(); // stop the browser from also firing a synthetic click
+
+    const rect = container.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const zone = x < rect.width * 0.33 ? 'left' : x > rect.width * 0.67 ? 'right' : 'middle';
+    const now = Date.now();
+    const isDoubleTap = now - lastTapRef.current.time < 300 && lastTapRef.current.zone === zone;
+    lastTapRef.current = { time: now, zone };
+
+    if (isDoubleTap) {
+      clearTimeout(tapTimeoutRef.current);
+      if (zone === 'left') skip(-10);
+      else if (zone === 'right') skip(10);
+      else toggleFullscreen();
+      return;
+    }
+
+    clearTimeout(tapTimeoutRef.current);
+    tapTimeoutRef.current = setTimeout(() => {
+      if (!controlsShownRef.current) showControlsNow();
+      else togglePlay();
+    }, 260);
+  }, [skip, toggleFullscreen, togglePlay, showControlsNow]);
+
+  const handleVolButtonClick = useCallback((e) => {
+    e.stopPropagation();
+    if (isCoarsePointer()) {
+      if (volOpen) { toggleMute(); } else { setVolOpen(true); showControlsNow(); }
+    } else {
+      toggleMute();
+    }
+  }, [isCoarsePointer, volOpen, toggleMute, showControlsNow]);
+
   const changeVolume = useCallback((val) => {
     const v = videoRef.current;
     if (!v) return;
     v.volume = val;
     v.muted = val === 0;
   }, []);
+
+  // ── Volume Boost (Web Audio API) ──────────────────────────────────────────
+  // Native <video>.volume caps at 1.0. To push louder than "normal" without
+  // clipping/distorting the audio, we route the element through a WebAudio
+  // GainNode (for the extra gain) followed by a DynamicsCompressorNode
+  // (which gently limits peaks) before hitting the speakers.
+  const initAudioGraph = useCallback(() => {
+    if (audioCtxRef.current) return audioCtxRef.current;
+    const v = videoRef.current;
+    if (!v) return null;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) throw new Error('Web Audio API unsupported');
+      const ctx = new Ctx();
+      const source = ctx.createMediaElementSource(v);
+      const gain = ctx.createGain();
+      gain.gain.value = boostEnabled ? boostLevel : 1;
+
+      // Soft limiter so boosted audio doesn't clip/"break" at louder levels
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -6;
+      compressor.knee.value = 12;
+      compressor.ratio.value = 8;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+
+      source.connect(gain);
+      gain.connect(compressor);
+      compressor.connect(ctx.destination);
+
+      audioCtxRef.current = ctx;
+      sourceNodeRef.current = source;
+      gainNodeRef.current = gain;
+      compressorNodeRef.current = compressor;
+    } catch (e) {
+      console.warn('Volume boost unavailable:', e);
+      setBoostSupported(false);
+      return null;
+    }
+    return audioCtxRef.current;
+  }, [boostEnabled, boostLevel]);
+
+  // Keep the gain node in sync with the boost toggle/level
+  useEffect(() => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.setTargetAtTime(
+        boostEnabled ? boostLevel : 1,
+        audioCtxRef.current?.currentTime ?? 0,
+        0.05
+      );
+    }
+  }, [boostEnabled, boostLevel]);
+
+  // Browsers suspend AudioContext until a user gesture — resume on play
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const resume = () => { audioCtxRef.current?.resume().catch(() => {}); };
+    v.addEventListener('play', resume);
+    return () => v.removeEventListener('play', resume);
+  }, []);
+
+  // Tear down the audio graph when the component unmounts
+  useEffect(() => () => {
+    try { audioCtxRef.current?.close(); } catch (_) { }
+    audioCtxRef.current = null;
+  }, []);
+
+  const toggleBoost = useCallback(() => {
+    setBoostEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        const ctx = initAudioGraph();
+        ctx?.resume().catch(() => {});
+      }
+      toast(next ? `Volume boost ${Math.round(boostLevel * 100)}%` : 'Volume boost off');
+      return next;
+    });
+  }, [initAudioGraph, boostLevel, toast]);
+
+  const changeBoostLevel = useCallback((val) => {
+    setBoostLevel(val);
+    if (!boostEnabled) return; // level only takes effect while boost is on
+  }, [boostEnabled]);
 
   const setSpeed = useCallback((rate) => {
     const v = videoRef.current;
@@ -468,6 +660,7 @@ function CustomPlayer({
 
   const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
   const controlsShown = controlsVisible || !playing;
+  controlsShownRef.current = controlsShown;
 
   return (
     <div
@@ -480,7 +673,7 @@ function CustomPlayer({
       ].filter(Boolean).join(' ')}
       onMouseMove={showControlsNow}
       onMouseLeave={() => { if (playing) { clearTimeout(hideTimeout.current); setControlsVisible(false); } }}
-      onClick={() => { if (showSettings) setShowSettings(false); }}
+      onClick={() => { if (showSettings) setShowSettings(false); if (volOpen) setVolOpen(false); }}
     >
       {/* VIDEO */}
       <video
@@ -489,8 +682,10 @@ function CustomPlayer({
         poster={poster}
         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
         onDoubleClick={toggleFullscreen}
+        onTouchEnd={handleVideoTap}
         playsInline
         crossOrigin="anonymous"
+        aria-label={title || 'Video player'}
       >
         {subtitles.map((s) => (
           <track key={s.label} kind="subtitles" src={s.src} srcLang={s.lang} label={s.label} />
@@ -499,7 +694,14 @@ function CustomPlayer({
 
       {/* CENTER PLAY BUTTON (Ultra Premium) */}
       {!playing && !loading && !error && (
-        <div className="cp__center-play" onClick={(e) => { e.stopPropagation(); togglePlay(); }}>
+        <div
+          className="cp__center-play"
+          onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+          role="button"
+          tabIndex={0}
+          aria-label="Play"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePlay(); } }}
+        >
           <Icons.Play />
         </div>
       )}
@@ -525,7 +727,7 @@ function CustomPlayer({
       {/* TOP BAR */}
       <div className={`cp__top${controlsShown ? ' cp__top--visible' : ''}`}>
         {onBack && (
-          <button className="cp__icon-btn" onClick={onBack} title="Back">
+          <button className="cp__icon-btn" onClick={onBack} title="Back" aria-label="Back">
             <Icons.Back />
           </button>
         )}
@@ -533,13 +735,14 @@ function CustomPlayer({
           {title && <span className="cp__title">{title}</span>}
           {currentChapter && <span className="cp__chapter-label">· {currentChapter.title}</span>}
         </div>
-        {/* <button
-          className="cp__icon-btn"
+        <button
+          className="cp__icon-btn cp__btn-shortcuts"
           onClick={(e) => { e.stopPropagation(); setShowShortcuts(p => !p); }}
           title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
         >
           <Icons.Keyboard />
-        </button> */}
+        </button>
       </div>
 
       {/* BOTTOM */}
@@ -556,6 +759,17 @@ function CustomPlayer({
           onTouchMove={(e) => { e.stopPropagation(); onProgressMouseMove(e); }}
           onTouchEnd={() => { setIsDragging(false); setHoverTime(null); }}
           onClick={(e) => e.stopPropagation()}
+          role="slider"
+          tabIndex={0}
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(duration) || 0}
+          aria-valuenow={Math.round(currentTime)}
+          aria-valuetext={`${fmt(currentTime)} of ${fmt(duration)}`}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') { e.preventDefault(); skip(5); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); skip(-5); }
+          }}
         >
           {chapters.map((ch) => (
             <div
@@ -587,23 +801,24 @@ function CustomPlayer({
         {/* CONTROLS ROW */}
         <div className="cp__bar" onClick={(e) => e.stopPropagation()}>
           <div className="cp__bar-left">
-            <button className="cp__icon-btn cp__btn-play" onClick={togglePlay} title="Play/Pause (K)">
+            <button className="cp__icon-btn cp__btn-play" onClick={togglePlay} title="Play/Pause (K)" aria-label={playing ? 'Pause' : 'Play'}>
               {playing ? <Icons.Pause /> : <Icons.Play />}
             </button>
 
-            <button className="cp__icon-btn cp__btn-skip" onClick={() => skip(-10)} title="Rewind 10s (←)">
+            <button className="cp__icon-btn cp__btn-skip" onClick={() => skip(-10)} title="Rewind 10s (←)" aria-label="Rewind 10 seconds">
               <Icons.Rewind />
              
             </button>
 
-            <button className="cp__icon-btn cp__btn-skip" onClick={() => skip(10)} title="Forward 10s (→)">
+            <button className="cp__icon-btn cp__btn-skip" onClick={() => skip(10)} title="Forward 10s (→)" aria-label="Forward 10 seconds">
               <Icons.Forward />
              
             </button>
 
-            <div className="cp__vol-wrap">
-              <button className="cp__icon-btn" onClick={toggleMute} title="Mute (M)">
+            <div className={`cp__vol-wrap${volOpen ? ' cp__vol-wrap--open' : ''}`}>
+              <button className="cp__icon-btn" onClick={handleVolButtonClick} title="Mute (M)" aria-label={muted ? 'Unmute' : 'Mute'}>
                 <VolumeIcon />
+                {boostEnabled && <span className="cp__boost-badge">{Math.round(boostLevel * 100)}%</span>}
               </button>
               <div className="cp__vol-slider-wrap">
                 <input
@@ -612,6 +827,7 @@ function CustomPlayer({
                   min="0" max="1" step="0.02"
                   value={muted ? 0 : volume}
                   onChange={(e) => changeVolume(parseFloat(e.target.value))}
+                  aria-label="Volume"
                 />
               </div>
             </div>
@@ -634,9 +850,10 @@ function CustomPlayer({
 
             {document.pictureInPictureEnabled && (
               <button
-                className={`cp__icon-btn${pipActive ? ' cp__icon-btn--on' : ''}`}
+                className={`cp__icon-btn cp__btn-pip${pipActive ? ' cp__icon-btn--on' : ''}`}
                 onClick={togglePiP}
                 title="Picture in Picture (P)"
+                aria-label="Picture in picture"
               >
                 <Icons.PiP />
               </button>
@@ -647,6 +864,7 @@ function CustomPlayer({
                 className={`cp__icon-btn${activeSubtitle !== 'off' ? ' cp__icon-btn--on' : ''}`}
                 onClick={(e) => { e.stopPropagation(); setShowSettings(p => !p); setSettingsPanel('subtitles'); }}
                 title="Subtitles"
+                aria-label="Subtitles"
               >
                 <Icons.Subtitles />
               </button>
@@ -656,11 +874,12 @@ function CustomPlayer({
               className={`cp__icon-btn${showSettings ? ' cp__icon-btn--on' : ''}`}
               onClick={(e) => { e.stopPropagation(); setShowSettings(p => !p); setSettingsPanel('main'); }}
               title="Settings"
+              aria-label="Settings"
             >
               <Icons.Settings />
             </button>
 
-            <button className="cp__icon-btn" onClick={toggleFullscreen} title="Fullscreen (F)">
+            <button className="cp__icon-btn" onClick={toggleFullscreen} title="Fullscreen (F)" aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
               {fullscreen ? <Icons.ExitFullscreen /> : <Icons.Fullscreen />}
             </button>
           </div>
@@ -680,6 +899,15 @@ function CustomPlayer({
                   <Icons.ChevronRight />
                 </span>
               </button>
+              {boostSupported && (
+                <button className={`cp__settings-row${boostEnabled ? ' cp__settings-row--active' : ''}`} onClick={() => setSettingsPanel('boost')}>
+                  <span>Volume boost</span>
+                  <span className="cp__settings-val">
+                    {boostEnabled ? `${Math.round(boostLevel * 100)}%` : 'Off'}
+                    <Icons.ChevronRight />
+                  </span>
+                </button>
+              )}
               {qualities.length > 0 && (
                 <button className="cp__settings-row" onClick={() => setSettingsPanel('quality')}>
                   <span>Quality</span>
@@ -717,6 +945,46 @@ function CustomPlayer({
                     {playbackRate === s && <Icons.Check />}
                   </button>
                 ))}
+              </div>
+            </>
+          )}
+
+          {settingsPanel === 'boost' && (
+            <>
+              <button className="cp__settings-back" onClick={() => setSettingsPanel('main')}>
+                <Icons.Back /> Volume boost
+              </button>
+              <div className="cp__boost-panel">
+                <div className="cp__boost-toggle-row">
+                  <span>Boost audio</span>
+                  <button
+                    className={`cp__toggle${boostEnabled ? ' cp__toggle--on' : ''}`}
+                    role="switch"
+                    aria-checked={boostEnabled}
+                    aria-label="Toggle volume boost"
+                    onClick={toggleBoost}
+                  >
+                    <span className="cp__toggle-thumb" />
+                  </button>
+                </div>
+                <div className={`cp__boost-slider-row${boostEnabled ? '' : ' cp__boost-slider-row--disabled'}`}>
+                  <input
+                    type="range"
+                    className="cp__boost-slider"
+                    min="1" max="2" step="0.05"
+                    value={boostLevel}
+                    disabled={!boostEnabled}
+                    onChange={(e) => changeBoostLevel(parseFloat(e.target.value))}
+                    style={{ '--boost': `${((boostLevel - 1) / 1) * 100}%` }}
+                    aria-label="Boost amount"
+                  />
+                  <span className="cp__boost-value">{Math.round(boostLevel * 100)}%</span>
+                </div>
+                <p className="cp__boost-note">
+                  Amplifies audio up to 2× using dynamic range limiting to help
+                  prevent distortion at higher levels. Quality can still vary
+                  depending on the source.
+                </p>
               </div>
             </>
           )}
