@@ -155,10 +155,10 @@ function App() {
       <LayoutAnimationProvider>
         <BrowserRouter>
           <ScrollToTop />
-          <Layout>
-            <AnimatedRoutes />
-          </Layout>
-          <InstallPWA />
+<Layout>
+             <AnimatedRoutes />
+           </Layout>
+           {/* <InstallPWA /> */}
         </BrowserRouter>
       </LayoutAnimationProvider>
     </AuthProvider>

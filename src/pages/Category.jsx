@@ -441,7 +441,8 @@ function Category() {
         }
         
         .category-item-card:hover {
-          transform: translateY(-10px);
+          transform: translateY(-10px) scale(1.02);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
         
         .item-poster-wrapper {
