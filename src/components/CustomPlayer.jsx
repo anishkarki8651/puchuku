@@ -147,6 +147,15 @@ function CustomPlayer({
   const [boostLevel, setBoostLevel] = useState(1.5); // 1.0 (100%) – 2.0 (200%)
   const [boostSupported, setBoostSupported] = useState(true);
 
+  // Touch gestures: swipe-to-seek, swipe for volume/brightness, hold for 2x speed.
+  // Mirrors the conventions of YouTube/Netflix mobile apps.
+  const touchGestureRef = useRef({ active: false, mode: null });
+  const longPressTimerRef = useRef(null);
+  const prevRateRef = useRef(1);
+  const [gestureHud, setGestureHud] = useState(null); // { type: 'seek'|'volume'|'brightness', ... } | null
+  const [brightness, setBrightness] = useState(1); // CSS filter multiplier, 0.5–1.5
+  const [speedBoostActive, setSpeedBoostActive] = useState(false);
+
   const toast = useCallback((text) => {
     const id = ++toastIdRef.current;
     setToasts((p) => [...p, { id, text }]);
@@ -499,6 +508,114 @@ function CustomPlayer({
     }, 260);
   }, [skip, toggleFullscreen, togglePlay, showControlsNow]);
 
+  // ── Swipe / hold gestures on the video surface ─────────────────────────
+  // Horizontal drag  -> scrub-seek with a live time preview (committed on release)
+  // Vertical drag    -> right half = volume, left half = brightness
+  // Press and hold   -> temporary 2x speed boost (like YouTube/TikTok)
+  const SWIPE_DEADZONE = 12;
+  const LONG_PRESS_MS = 450;
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleVideoTouchStart = useCallback((e) => {
+    const touch = e.touches[0];
+    const rect = playerRef.current?.getBoundingClientRect();
+    if (!touch || !rect) return;
+
+    touchGestureRef.current = {
+      active: true,
+      mode: null,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      seekStartTime: videoRef.current?.currentTime ?? 0,
+      startVolume: volume,
+      startBrightness: brightness,
+      zone: touch.clientX - rect.left < rect.width / 2 ? 'left' : 'right',
+      rectWidth: rect.width,
+      rectHeight: rect.height,
+    };
+
+    clearLongPress();
+    longPressTimerRef.current = setTimeout(() => {
+      const g = touchGestureRef.current;
+      if (!g.active || g.mode) return; // already turned into a swipe, not a hold
+      g.mode = 'speed';
+      const v = videoRef.current;
+      if (v) {
+        prevRateRef.current = v.playbackRate;
+        v.playbackRate = 2;
+      }
+      setSpeedBoostActive(true);
+    }, LONG_PRESS_MS);
+  }, [volume, brightness, clearLongPress]);
+
+  const handleVideoTouchMove = useCallback((e) => {
+    const g = touchGestureRef.current;
+    if (!g.active) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = touch.clientX - g.startX;
+    const dy = touch.clientY - g.startY;
+
+    if (!g.mode) {
+      if (Math.abs(dx) < SWIPE_DEADZONE && Math.abs(dy) < SWIPE_DEADZONE) return;
+      clearLongPress(); // real movement means this isn't a hold
+      g.mode = Math.abs(dx) > Math.abs(dy) ? 'seek' : 'vertical';
+    }
+    if (g.mode === 'speed') return;
+
+    if (g.mode === 'seek') {
+      if (!duration) return;
+      const t = Math.max(0, Math.min(duration, g.seekStartTime + (dx / g.rectWidth) * duration));
+      g.previewTime = t;
+      setGestureHud({ type: 'seek', time: t, delta: t - g.seekStartTime });
+    } else {
+      const delta = -dy / g.rectHeight; // dragging up increases the value
+      if (g.zone === 'right') {
+        const v = Math.max(0, Math.min(1, g.startVolume + delta));
+        changeVolume(v);
+        setGestureHud({ type: 'volume', value: v });
+      } else {
+        const b = Math.max(0.5, Math.min(1.5, g.startBrightness + delta));
+        setBrightness(b);
+        setGestureHud({ type: 'brightness', value: b - 0.5 });
+      }
+    }
+  }, [duration, changeVolume, clearLongPress]);
+
+  const handleVideoTouchEnd = useCallback((e) => {
+    const g = touchGestureRef.current;
+    clearLongPress();
+    if (!g.active) return;
+    g.active = false;
+
+    if (g.mode === 'speed') {
+      const v = videoRef.current;
+      if (v) v.playbackRate = prevRateRef.current || 1;
+      setSpeedBoostActive(false);
+      return;
+    }
+    if (g.mode === 'seek') {
+      if (videoRef.current && g.previewTime != null) videoRef.current.currentTime = g.previewTime;
+      setGestureHud(null);
+      showControlsNow();
+      return;
+    }
+    if (g.mode === 'vertical') {
+      setGestureHud(null);
+      return;
+    }
+    // No swipe or hold occurred — this was a plain tap, fall back to tap handling.
+    handleVideoTap(e);
+  }, [handleVideoTap, showControlsNow, clearLongPress]);
+
+  useEffect(() => () => clearLongPress(), [clearLongPress]);
+
   const handleVolButtonClick = useCallback((e) => {
     e.stopPropagation();
     if (isCoarsePointer()) {
@@ -682,7 +799,10 @@ function CustomPlayer({
         poster={poster}
         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
         onDoubleClick={toggleFullscreen}
-        onTouchEnd={handleVideoTap}
+        onTouchStart={handleVideoTouchStart}
+        onTouchMove={handleVideoTouchMove}
+        onTouchEnd={handleVideoTouchEnd}
+        style={brightness !== 1 ? { filter: `brightness(${brightness})` } : undefined}
         playsInline
         crossOrigin="anonymous"
         aria-label={title || 'Video player'}
@@ -710,6 +830,48 @@ function CustomPlayer({
       {(loading || buffering) && !error && (
         <div className="cp__spinner-wrap">
           <div className="cp__spinner" />
+        </div>
+      )}
+
+      {/* GESTURE HUD — swipe seek / volume / brightness */}
+      {gestureHud && (
+        <div className={`cp__gesture-hud cp__gesture-hud--${gestureHud.type}`}>
+          {gestureHud.type === 'seek' && (
+            <>
+              <span className="cp__gesture-hud-time">{fmt(gestureHud.time)}</span>
+              <span className="cp__gesture-hud-delta">
+                {gestureHud.delta >= 0 ? '+' : '−'}{fmt(Math.abs(gestureHud.delta))}
+              </span>
+            </>
+          )}
+          {gestureHud.type === 'volume' && (
+            <>
+              {gestureHud.value === 0
+                ? <Icons.Mute />
+                : gestureHud.value < 0.5 ? <Icons.VolumeLow /> : <Icons.VolumeFull />}
+              <div className="cp__gesture-hud-bar">
+                <div className="cp__gesture-hud-bar-fill" style={{ height: `${gestureHud.value * 100}%` }} />
+              </div>
+              <span className="cp__gesture-hud-pct">{Math.round(gestureHud.value * 100)}%</span>
+            </>
+          )}
+          {gestureHud.type === 'brightness' && (
+            <>
+              <span className="cp__gesture-hud-icon" aria-hidden="true">☀</span>
+              <div className="cp__gesture-hud-bar">
+                <div className="cp__gesture-hud-bar-fill" style={{ height: `${gestureHud.value * 100}%` }} />
+              </div>
+              <span className="cp__gesture-hud-pct">{Math.round(gestureHud.value * 100)}%</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* HOLD-TO-SPEED BADGE */}
+      {speedBoostActive && (
+        <div className="cp__speed-badge">
+          <Icons.Boost />
+          <span>2×</span>
         </div>
       )}
 
