@@ -640,12 +640,10 @@ function CustomPlayer({
   useEffect(() => {
     if (!isDragging) return;
     const up = () => setIsDragging(false);
-    const move = (e) => { if (e.touches) e.preventDefault(); seekTo(e); };
+    const move = (e) => { seekTo(e); };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
-    // passive: false so preventDefault() above actually stops the page
-    // from scrolling while the user drags the seek bar with a finger.
-    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchmove', move, { passive: true });
     window.addEventListener('touchend', up);
     return () => {
       window.removeEventListener('mousemove', move);
@@ -757,8 +755,8 @@ function CustomPlayer({
           onMouseDown={(e) => { setIsDragging(true); seekTo(e); }}
           onMouseMove={onProgressMouseMove}
           onMouseLeave={() => setHoverTime(null)}
-          onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); setIsDragging(true); seekTo(e); }}
-          onTouchMove={(e) => { e.stopPropagation(); e.preventDefault(); onProgressMouseMove(e); }}
+          onTouchStart={(e) => { e.stopPropagation(); setIsDragging(true); seekTo(e); }}
+          onTouchMove={(e) => { e.stopPropagation(); onProgressMouseMove(e); }}
           onTouchEnd={() => { setIsDragging(false); setHoverTime(null); }}
           onClick={(e) => e.stopPropagation()}
           role="slider"

@@ -106,10 +106,6 @@
   height: 100%;
   object-fit: contain;
   background: #000;
-  /* Kill native double-tap-to-zoom / pinch-zoom so our own tap & double-tap
-     gesture handling (skip / play / fullscreen) doesn't race the browser's
-     built-in zoom gesture on mobile. */
-  touch-action: manipulation;
 }
 
 /* ── SUBTITLES ── */
@@ -370,9 +366,6 @@ video::cue {
   align-items: center;
   cursor: pointer;
   margin-bottom: 16px;
-  /* Prevent the browser from interpreting a drag on the seek bar as a page
-     scroll gesture on touch devices. */
-  touch-action: none;
 }
 
 .cp__progress-rail {
