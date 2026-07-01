@@ -508,6 +508,22 @@ function CustomPlayer({
     }, 260);
   }, [skip, toggleFullscreen, togglePlay, showControlsNow]);
 
+  const handleVolButtonClick = useCallback((e) => {
+    e.stopPropagation();
+    if (isCoarsePointer()) {
+      if (volOpen) { toggleMute(); } else { setVolOpen(true); showControlsNow(); }
+    } else {
+      toggleMute();
+    }
+  }, [isCoarsePointer, volOpen, toggleMute, showControlsNow]);
+
+  const changeVolume = useCallback((val) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.volume = val;
+    v.muted = val === 0;
+  }, []);
+
   // ── Swipe / hold gestures on the video surface ─────────────────────────
   // Horizontal drag  -> scrub-seek with a live time preview (committed on release)
   // Vertical drag    -> right half = volume, left half = brightness
@@ -615,22 +631,6 @@ function CustomPlayer({
   }, [handleVideoTap, showControlsNow, clearLongPress]);
 
   useEffect(() => () => clearLongPress(), [clearLongPress]);
-
-  const handleVolButtonClick = useCallback((e) => {
-    e.stopPropagation();
-    if (isCoarsePointer()) {
-      if (volOpen) { toggleMute(); } else { setVolOpen(true); showControlsNow(); }
-    } else {
-      toggleMute();
-    }
-  }, [isCoarsePointer, volOpen, toggleMute, showControlsNow]);
-
-  const changeVolume = useCallback((val) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.volume = val;
-    v.muted = val === 0;
-  }, []);
 
   // ── Volume Boost (Web Audio API) ──────────────────────────────────────────
   // Native <video>.volume caps at 1.0. To push louder than "normal" without

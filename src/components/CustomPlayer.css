@@ -106,6 +106,10 @@
   height: 100%;
   object-fit: contain;
   background: #000;
+  /* Hands full control of touch input to our own swipe/hold gesture handlers
+     instead of the browser's default pan/zoom, which is what makes
+     swipe-to-seek and swipe-for-volume/brightness feel native. */
+  touch-action: none;
 }
 
 /* ── SUBTITLES ── */
@@ -163,6 +167,129 @@ video::cue {
 @keyframes cp-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ── GESTURE HUD (swipe seek / volume / brightness) ── */
+.cp__gesture-hud {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 22px;
+  min-width: 84px;
+  background: rgba(12, 12, 12, 0.75);
+  border: 1px solid var(--cp-white-08);
+  border-radius: 16px;
+  color: var(--cp-white);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: none;
+  z-index: 15;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.cp__gesture-hud--seek {
+  flex-direction: row;
+  gap: 10px;
+  padding: 12px 20px;
+  min-width: unset;
+}
+
+.cp__gesture-hud-time {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cp__gesture-hud-delta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cp-white-50);
+  font-variant-numeric: tabular-nums;
+}
+
+.cp__gesture-hud--volume svg,
+.cp__gesture-hud-icon {
+  width: 22px;
+  height: 22px;
+  fill: var(--cp-white);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.cp__gesture-hud-bar {
+  position: relative;
+  width: 4px;
+  height: 70px;
+  border-radius: 3px;
+  background: var(--cp-white-15);
+  overflow: hidden;
+}
+
+.cp__gesture-hud-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--cp-accent);
+  border-radius: inherit;
+  transition: height 0.05s linear;
+}
+
+.cp__gesture-hud-pct {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cp-white-70);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── HOLD-TO-SPEED BADGE ── */
+.cp__speed-badge {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(12, 12, 12, 0.8);
+  border: 1px solid var(--cp-white-08);
+  border-radius: 50px;
+  color: var(--cp-white);
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: none;
+  z-index: 15;
+  animation: cp-fade 0.15s var(--cp-ease) both;
+}
+
+.cp__speed-badge svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--cp-accent);
+}
+
+@media (max-width: 600px) {
+  .cp__gesture-hud {
+    padding: 14px 18px;
+  }
+
+  .cp__gesture-hud-bar {
+    height: 56px;
+  }
+
+  .cp__speed-badge {
+    top: 14px;
+    padding: 7px 14px;
+    font-size: 12px;
   }
 }
 
@@ -366,6 +493,7 @@ video::cue {
   align-items: center;
   cursor: pointer;
   margin-bottom: 16px;
+  touch-action: none;
 }
 
 .cp__progress-rail {
